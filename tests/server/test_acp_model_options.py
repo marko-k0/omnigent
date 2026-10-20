@@ -56,6 +56,38 @@ def test_resolve_harness_is_acp_rejects_other_harnesses() -> None:
     assert orch._resolve_harness_impl_is_acp(conv, None) is False
 
 
+def test_resolve_harness_is_acp_folds_builtin_acp_cli_row() -> None:
+    """A builtin ACP CLI row pin reports as the generic ``acp`` harness.
+
+    Builtin rows (``jcode``, ``grok``, ...) run the same generic ACP wrap
+    as ``acp:<slug>`` agents, and both the server's model-option fetch and
+    the Web UI picker gate on the canonical ``acp`` spelling — without the
+    fold a builtin-row session loses the model picker.
+    """
+    conv = _conv(harness_override="jcode")
+    assert orch._resolve_harness_impl_is_acp(conv, None) is True
+
+
+def test_resolve_harness_folds_builtin_row_in_snapshot() -> None:
+    """The snapshot resolver itself returns ``acp`` for a builtin-row pin."""
+    from omnigent.server.routes._sessions.helpers import _resolve_harness_impl
+
+    conv = _conv(harness_override="grok")
+    assert _resolve_harness_impl(conv, agent_store=None) == "acp"
+
+
+def test_resolve_harness_keeps_non_builtin_override_verbatim() -> None:
+    """Non-builtin overrides are untouched by the fold (unchanged behavior)."""
+    from omnigent.server.routes._sessions.helpers import _resolve_harness_impl
+
+    conv = _conv(harness_override="claude-native")
+    assert _resolve_harness_impl(conv, agent_store=None) == "claude-native"
+    # A configured-agent slug is not a builtin row; it stays verbatim here
+    # and canonicalizes to ``acp`` downstream (is_acp / family checks).
+    conv = _conv(harness_override="acp:jcode-litellm")
+    assert _resolve_harness_impl(conv, agent_store=None) == "acp:jcode-litellm"
+
+
 def test_resolve_harness_is_acp_false_without_override_or_spec() -> None:
     """No override + no agent_id → harness unknown → not acp."""
     conv = _conv(harness_override=None, agent_id=None)

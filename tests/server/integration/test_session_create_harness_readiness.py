@@ -98,7 +98,10 @@ async def test_child_create_preserves_ready_and_unknown_hosts(
         },
     )
     assert response.status_code == 201, response.text
-    assert response.json()["harness"] == "jcode"
+    # Builtin ACP CLI rows fold to the generic ``acp`` harness in the
+    # snapshot (same executor wrap as ``acp:<slug>`` agents); the raw
+    # ``jcode`` pin stays on the row for the runner.
+    assert response.json()["harness"] == "acp"
 
 
 @pytest.mark.parametrize("bundle", [False, True])

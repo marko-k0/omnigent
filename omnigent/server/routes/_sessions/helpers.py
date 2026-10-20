@@ -1922,7 +1922,30 @@ def _resolve_harness_impl(
     # create) wins over the spec's declared harness, so the snapshot
     # reports what the runner actually spawns.
     if conv.harness_override:
-        return conv.harness_override
+        resolved = conv.harness_override
+    else:
+        resolved = _resolve_harness_spec(conv, agent_store=agent_store, agent_cache=agent_cache)
+    if not resolved:
+        return None
+    # Builtin ACP CLI rows (jcode, grok, qwen, devin, ...) run the same
+    # generic ACP wrap as ``acp:<slug>`` agents, so a builtin-row pin
+    # reports as ``acp`` too — the model-picker option fetch and the Web
+    # UI picker both gate on ``canonical == "acp"``. Spawn behavior is
+    # unaffected: the runner resolves the raw override separately.
+    from omnigent.acp_cli_harnesses import ACP_CLI_HARNESSES
+
+    if resolved in ACP_CLI_HARNESSES:
+        return "acp"
+    return resolved
+
+
+def _resolve_harness_spec(
+    conv: Conversation,
+    *,
+    agent_store: AgentStore | None = None,
+    agent_cache: AgentCache | None = None,
+) -> str | None:
+    """Resolve the harness from *conv*'s bound agent spec (no override)."""
     if conv.agent_id is None:
         return None
     try:
